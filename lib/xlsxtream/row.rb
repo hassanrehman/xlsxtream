@@ -8,6 +8,7 @@ module Xlsxtream
     ENCODING = Encoding.find('UTF-8')
 
     NUMBER_PATTERN = /\A-?[0-9]+(\.[0-9]+)?\z/.freeze
+    PERCENT_PATTERN = /\A-?[0-9]+(\.[0-9]+)?\%\z/.freeze
     # ISO 8601 yyyy-mm-dd
     DATE_PATTERN = /\A[0-9]{4}-[0-9]{2}-[0-9]{2}\z/.freeze
     # ISO 8601 yyyy-mm-ddThh:mm:ss(.s)(Z|+hh:mm|-hh:mm)
@@ -18,6 +19,7 @@ module Xlsxtream
 
     DATE_STYLE = 1
     TIME_STYLE = 2
+    PERCENT_STYLE = 3
 
     def initialize(row, rownum, options = {})
       @row = row
@@ -50,15 +52,19 @@ module Xlsxtream
         when Date
           xml << %Q{<c r="#{cid}" s="#{DATE_STYLE}"><v>#{date_to_oa_date(value)}</v></c>}
         else
-          value = value.to_s
+          if value.is_a?(Hash) and value[:u] == '%'
+            xml << %Q{<c r="#{cid}" s="#{PERCENT_STYLE}"><v>#{value[:v]}</v></c>}
+          else
+            value = value.to_s
 
-          unless value.empty? # no xml output for for empty strings
-            value = value.encode(ENCODING) if value.encoding != ENCODING
+            unless value.empty? # no xml output for for empty strings
+              value = value.encode(ENCODING) if value.encoding != ENCODING
 
-            if @sst
-              xml << %Q{<c r="#{cid}" t="s"><v>#{@sst[value]}</v></c>}
-            else
-              xml << %Q{<c r="#{cid}" t="inlineStr"><is><t>#{XML.escape_value(value)}</t></is></c>}
+              if @sst
+                xml << %Q{<c r="#{cid}" t="s"><v>#{@sst[value]}</v></c>}
+              else
+                xml << %Q{<c r="#{cid}" t="inlineStr"><is><t>#{XML.escape_value(value)}</t></is></c>}
+              end
             end
           end
         end
@@ -82,6 +88,8 @@ module Xlsxtream
         Date.parse(value) rescue value
       when TIME_PATTERN
         DateTime.parse(value) rescue value
+      when PERCENT_PATTERN
+        { v: auto_format(value[0..-2]) / 100, u: '%' }
       else
         value
       end
