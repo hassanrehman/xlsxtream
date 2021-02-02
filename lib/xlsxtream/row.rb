@@ -89,7 +89,7 @@ module Xlsxtream
       when TIME_PATTERN
         DateTime.parse(value) rescue value
       when PERCENT_PATTERN
-        { v: auto_format(value[0..-2]) / 100, u: '%' }
+        { v: auto_format(value[0..-2]) / 100.0, u: '%' }
       else
         value
       end
